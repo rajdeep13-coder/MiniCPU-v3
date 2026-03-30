@@ -1,0 +1,15 @@
+VCD info: dumpfile mini_cpu.vcd opened for output.
+
+Starting TEST=add, program=add_two_numbers.mem, expected M[12]=12
+==============================================================================================
+ Cycle |  PC  | Instruction           |   ACC(dec/hex)   | Memory Activity
+----------------------------------------------------------------------------------------------
+     0 |    1 | LOAD  10 (0x0a) |      7 / 0x07    | -
+     1 |    2 | ADD   11 (0x8b) |     12 / 0x0c    | -
+     2 |    3 | STORE 12 (0x4c) |     12 / 0x0c    | STORE -> M[12] = 12 (0x0c)
+         *** memory change detected: M[12] now 12 (0x0c)
+     3 |    3 | HALT      (0xff)    |     12 / 0x0c    | done asserted
+----------------------------------------------------------------------------------------------
+Done at cycle 4. Final: PC=3 ACC=12 (0x0c) M[12]=12
+ASSERT PASS (add): M[12]=12
+tb_mini_cpu.v:194: $finish called at 600000 (1ps)

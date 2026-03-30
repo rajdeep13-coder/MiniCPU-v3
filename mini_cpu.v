@@ -9,12 +9,14 @@ module mini_cpu (
 
     reg [7:0] memory [0:255];
 
+    reg [7:0] fetched_instruction;
     reg [1:0] opcode;
     reg [5:0] addr;
 
     localparam [1:0] OPC_LOAD = 2'b00;
     localparam [1:0] OPC_STORE = 2'b01;
     localparam [1:0] OPC_ADD = 2'b10;
+    localparam [7:0] INSTR_HALT = 8'hFF;
 
     always @(posedge clk) begin
         if (reset) begin
@@ -23,33 +25,39 @@ module mini_cpu (
             instruction <= 8'd0;
             done <= 1'b0;
         end else if (done) begin
+            // Hold state once execution is complete.
             pc <= pc;
             acc <= acc;
             instruction <= instruction;
             done <= done;
-        end else if (pc == 8'd255) begin
-            pc <= pc;
-            done <= 1'b1;
         end else begin
-            instruction = memory[pc];
-            opcode = instruction[7:6];
-            addr = instruction[5:0];
+            fetched_instruction = memory[pc];
+            instruction <= fetched_instruction;
 
-            case (opcode)
-                OPC_LOAD: begin
-                    acc <= memory[addr];
-                end
-                OPC_STORE: begin
-                    memory[addr] <= acc;
-                end
-                OPC_ADD: begin
-                    acc <= acc + memory[addr];
-                end
-                default: begin
-                end
-            endcase
+            if (fetched_instruction == INSTR_HALT) begin
+                done <= 1'b1;
+                pc <= pc;
+            end else begin
+                opcode = fetched_instruction[7:6];
+                addr = fetched_instruction[5:0];
 
-            pc <= pc + 8'd1;
+                case (opcode)
+                    OPC_LOAD: begin
+                        acc <= memory[addr];
+                    end
+                    OPC_STORE: begin
+                        memory[addr] <= acc;
+                    end
+                    OPC_ADD: begin
+                        acc <= acc + memory[addr];
+                    end
+                    default: begin
+                    end
+                endcase
+
+                pc <= pc + 8'd1;
+                done <= 1'b0;
+                end
         end
     end
 endmodule

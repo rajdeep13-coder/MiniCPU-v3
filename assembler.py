@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MiniCPU assembler: converts LOAD/STORE/ADD assembly into .mem hex bytes."""
+"""MiniCPU assembler: converts MiniCPU assembly into .mem hex bytes."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ OPCODES = {
     "LOAD": 0b00,
     "STORE": 0b01,
     "ADD": 0b10,
+    "HALT": 0b11,
 }
 
 
@@ -43,16 +44,23 @@ def parse_instruction(line: str, line_number: int) -> tuple[str, int] | None:
         return None
 
     parts = no_comment.split()
-    if len(parts) != 2:
-        raise AssemblerError(
-            f"Line {line_number}: expected '<INSTR> <addr>', got: {line.rstrip()}"
-        )
-
-    mnemonic = parts[0].upper()
+    mnemonic = parts[0].upper() if parts else ""
     if mnemonic not in OPCODES:
         valid = ", ".join(OPCODES.keys())
         raise AssemblerError(
-            f"Line {line_number}: invalid instruction '{parts[0]}'. Valid instructions: {valid}"
+            f"Line {line_number}: invalid instruction '{parts[0] if parts else ''}'. Valid instructions: {valid}"
+        )
+
+    if mnemonic == "HALT":
+        if len(parts) != 1:
+            raise AssemblerError(
+                f"Line {line_number}: HALT takes no operand, got: {line.rstrip()}"
+            )
+        return mnemonic, 0
+
+    if len(parts) != 2:
+        raise AssemblerError(
+            f"Line {line_number}: expected '<INSTR> <addr>' or 'HALT', got: {line.rstrip()}"
         )
 
     addr_text = parts[1]
@@ -85,7 +93,7 @@ def assemble_lines(lines: list[str]) -> list[tuple[int, str, int]]:
 
         mnemonic, addr = parsed
         machine_byte = (OPCODES[mnemonic] << 6) | addr
-        asm_text = f"{mnemonic} {addr}"
+        asm_text = mnemonic if mnemonic == "HALT" else f"{mnemonic} {addr}"
         program.append((pc, asm_text, machine_byte))
         pc += 1
 
@@ -111,8 +119,8 @@ def print_listing_table(program: list[tuple[int, str, int]]) -> None:
 
 
 def main() -> int:
-    input_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("program.asm")
-    output_path = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("program.mem")
+    input_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("asm/program.asm")
+    output_path = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("mem/program.mem")
 
     try:
         source = input_path.read_text(encoding="ascii").splitlines()

@@ -1,66 +1,165 @@
-# MiniCPU-v3: 3-Instruction 8-bit Accumulator CPU in Verilog
+# MiniCPU-v3
 
-![Status](https://img.shields.io/badge/Status-Under%20Development-orange)
-![Language](https://img.shields.io/badge/HDL-Verilog-blue)
-![Assembler](https://img.shields.io/badge/Assembler-Python%203.13-green)
-![Architecture](https://img.shields.io/badge/Architecture-von%20Neumann-lightgrey)
-![CPU Width](https://img.shields.io/badge/CPU-8--bit-informational)
-![ISA](https://img.shields.io/badge/ISA-3%20Instructions-red)
-![Memory](https://img.shields.io/badge/Memory-256%20Bytes-purple)
-![Simulation](https://img.shields.io/badge/Simulation-Testbench%20Ready-success)
+MiniCPU-v3 is a compact 8-bit educational CPU project that combines:
 
-## Project Description
+- A Verilog CPU core with accumulator architecture
+- A Python assembler for converting assembly to machine code
+- A simulation testbench with readable cycle-by-cycle logs and waveform dumps
 
-MiniCPU-v3 is a minimal yet fully functional 8-bit von Neumann architecture CPU implemented in Verilog. It supports only three instructions - LOAD, STORE, and ADD - making it an excellent educational project to understand the fundamentals of CPU design, fetch-decode-execute cycle, and hardware description language.
+This final Day-4 version includes a proper HALT opcode in the ISA and a cleaned project structure ready for hardware-focused next steps.
 
-The CPU features an 8-bit Accumulator (ACC), 8-bit Program Counter (PC), and 256 bytes of shared memory. A simple Python-based assembler converts human-readable assembly code into machine code for easy program loading. The design is simulated using a testbench that displays register states and memory changes cycle-by-cycle, with waveform support for debugging.
+## Final Project Structure
 
-## Instruction Set Architecture
+```text
+MiniCPU-v3/
+  assembler.py
+  README.md
+  run_regression.ps1
+  asm/
+    add_two_numbers.asm
+    sum_1_to_5.asm
+    calculator.asm
+    program.asm
+  mem/
+    add_two_numbers.mem
+    sum_1_to_5.mem
+    calculator.mem
+    program.mem
+  src/
+    mini_cpu.v
+  sim/
+    tb_mini_cpu.v
+    logs/
+      add.log
+      sum.log
+      calc.log
+    waves/
+      add.vcd
+      sum.vcd
+      calc.vcd
+```
 
-- LOAD addr  -> Opcode 00 -> 8-bit format: 00xxxxxx (addr = 6 bits)
-- STORE addr -> Opcode 01 -> 8-bit format: 01xxxxxx
-- ADD addr   -> Opcode 10 -> 8-bit format: 10xxxxxx
-- Program execution ends when PC reaches 255
+## ISA Specification
 
-## Repository Contents
+Instruction format is 8 bits total:
 
-- assembler.py: Python assembler that converts assembly into a Verilog-compatible memory file
-- program.asm: Default input assembly program
-- program.mem: Generated machine code file for readmemh
-- add_two_numbers.asm: Sample program to add values at addresses 10 and 11, store at 12
-- sum_1_to_5.asm: Sample program to sum values from addresses 20 to 24, store at 30
+- Bits [7:6] are opcode
+- Bits [5:0] are address/immediate field
+
+Supported instructions:
+
+- LOAD addr: opcode 00, binary format 00aaaaaa
+- STORE addr: opcode 01, binary format 01aaaaaa
+- ADD addr: opcode 10, binary format 10aaaaaa
+- HALT: opcode 11, binary format 11000000 in assembler output
+
+Address range is 0 to 63 because the operand field is 6 bits.
+
+## Prerequisites
+
+- Python 3.10+ (tested with Python 3.13)
+- Icarus Verilog tools:
+  - C:/iverilog/bin/iverilog.exe
+  - C:/iverilog/bin/vvp.exe
+- Optional waveform viewer: GTKWave
+
+## Quick Start
+
+1. Assemble and run all regression tests:
+
+```powershell
+.\run_regression.ps1
+```
+
+2. Expected high-level result:
+
+- add test passes with M[12] = 12
+- sum test passes with M[30] = 15
+- calc test passes with M[42] = 25
+
+3. Generated outputs:
+
+- Logs in sim/logs/
+- Waveforms in sim/waves/
 
 ## Assembler Usage
 
-Run with defaults:
+Default files:
 
-```bash
+```powershell
 python assembler.py
 ```
 
-Run with custom input and output files:
+Explicit files:
 
-```bash
-python assembler.py input.asm output.mem
+```powershell
+python assembler.py asm/program.asm mem/program.mem
 ```
 
-## Output Format
+Assembler behavior:
 
-The assembler generates one hex byte per line in the output memory file, compatible with Verilog readmemh:
+- Accepts LOAD, STORE, ADD, HALT
+- Supports comments using # and //
+- Enforces address range 0 to 63
+- Produces one hex byte per line for $readmemh
+
+Example output table:
 
 ```text
-0A
-8B
-4C
+Assembled 4 instruction(s) from 'asm\add_two_numbers.asm' -> 'mem\add_two_numbers.mem'
+Address  Assembly      Machine(bin)  Hex
+-------  ------------  ------------  ---
+      0  LOAD 10       00001010      0A
+      1  ADD 11        10001011      8B
+      2  STORE 12      01001100      4C
+      3  HALT          11000000      C0
 ```
 
-## Development Phase
+## Verilog Design Summary
 
-This project is currently under active development.
+CPU state elements:
 
-Planned next steps include:
+- PC: 8-bit program counter
+- ACC: 8-bit accumulator
+- instruction: current fetched byte
+- memory: 256 x 8-bit shared instruction/data memory
+- done: high when HALT executes
 
-- CPU module and control unit integration
-- Full fetch-decode-execute validation with testbench
-- Additional sample programs and verification cases
-- Waveform-based debugging documentation
+Execution model:
+
+1. Fetch instruction from memory[PC]
+2. Decode opcode/address fields
+3. Execute operation on ACC or memory
+4. Increment PC for non-HALT instructions
+5. Assert done on HALT and hold state
+
+## Simulation and Verification
+
+Testbench features:
+
+- Chooses add/sum/calc program via +TEST plusarg
+- Initializes data memory for each scenario
+- Prints cycle table with PC, instruction, ACC, and store activity
+- Fails with timeout or assertion mismatch
+
+Sample pass summary:
+
+```text
+ASSERT PASS (add): M[12]=12
+ASSERT PASS (sum): M[30]=15
+ASSERT PASS (calc): M[42]=25
+```
+
+## Learning Outcomes
+
+This project demonstrates:
+
+- Designing a minimal ISA and encoding format
+- Implementing fetch/decode/execute logic in Verilog
+- Building a robust assembler-to-hardware workflow
+- Using simulation logs and waveforms for debug and validation
+- Organizing HDL projects for maintainability and next-phase FPGA work
+
+## Notes
+
+- Additional docs (project report and demo guide) coming soon.

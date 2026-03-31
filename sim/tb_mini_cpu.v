@@ -28,7 +28,7 @@ module tb_mini_cpu;
     function string instr_mnemonic;
         input [7:0] instr;
         begin
-            if (instr == 8'hFF) begin
+            if (instr[7:6] == 2'b11) begin
                 instr_mnemonic = "HALT";
             end else begin
                 case (instr[7:6])
@@ -55,7 +55,7 @@ module tb_mini_cpu;
         input [7:0] instr;
         input [7:0] acc_value;
         begin
-            if ((instr[7:6] == 2'b01) && (instr != 8'hFF)) begin
+            if (instr[7:6] == 2'b01) begin
                 $display(
                     " %5d | %4d | %-5s %2d (0x%02h) | %6d / 0x%02h    | STORE -> M[%0d] = %0d (0x%02h)",
                     cyc,
@@ -69,7 +69,7 @@ module tb_mini_cpu;
                     dut.memory[instr[5:0]],
                     dut.memory[instr[5:0]]
                 );
-            end else if (instr == 8'hFF) begin
+            end else if (instr[7:6] == 2'b11) begin
                 $display(
                     " %5d | %4d | HALT      (0x%02h)    | %6d / 0x%02h    | done asserted",
                     cyc,
@@ -99,7 +99,7 @@ module tb_mini_cpu;
     end
 
     initial begin
-        $dumpfile("mini_cpu.vcd");
+        $dumpfile("sim/mini_cpu.vcd");
         $dumpvars(0, tb_mini_cpu);
     end
 
@@ -112,21 +112,21 @@ module tb_mini_cpu;
         end
 
         if (test_mode == "sum") begin
-            mem_file = "sum_1_to_5.mem";
+            mem_file = "mem/sum_1_to_5.mem";
             expected_result = 15;
             result_addr = 30;
-            program_len = 6;
+            program_len = 7;
         end else if (test_mode == "calc") begin
-            mem_file = "calculator.mem";
+            mem_file = "mem/calculator.mem";
             expected_result = 25;
             result_addr = 42;
-            program_len = 3;
+            program_len = 4;
         end else begin
             test_mode = "add";
-            mem_file = "add_two_numbers.mem";
+            mem_file = "mem/add_two_numbers.mem";
             expected_result = 12;
             result_addr = 12;
-            program_len = 3;
+            program_len = 4;
         end
 
         for (i = 0; i < 256; i = i + 1) begin
@@ -134,9 +134,6 @@ module tb_mini_cpu;
         end
 
         $readmemh(mem_file, dut.memory, 0, program_len - 1);
-
-        // Add explicit HALT marker after assembled instructions.
-        dut.memory[program_len] = 8'hFF;
 
         if (test_mode == "sum") begin
             dut.memory[8'd20] = 8'd1;
@@ -170,7 +167,7 @@ module tb_mini_cpu;
             curr_addr = curr_instr[5:0];
             print_cycle_row(cycle, dut.pc, curr_instr, dut.acc);
 
-            if ((curr_instr[7:6] == 2'b01) && (curr_instr != 8'hFF) && (dut.memory[curr_addr] != prev_mem_result)) begin
+            if ((curr_instr[7:6] == 2'b01) && (dut.memory[curr_addr] != prev_mem_result)) begin
                 $display("         *** memory change detected: M[%0d] now %0d (0x%02h)", curr_addr, dut.memory[curr_addr], dut.memory[curr_addr]);
             end
 

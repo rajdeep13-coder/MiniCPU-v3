@@ -16,7 +16,7 @@ module mini_cpu (
     localparam [1:0] OPC_LOAD = 2'b00;
     localparam [1:0] OPC_STORE = 2'b01;
     localparam [1:0] OPC_ADD = 2'b10;
-    localparam [7:0] INSTR_HALT = 8'hFF;
+    localparam [1:0] OPC_HALT = 2'b11;
 
     always @(posedge clk) begin
         if (reset) begin
@@ -33,14 +33,13 @@ module mini_cpu (
         end else begin
             fetched_instruction = memory[pc];
             instruction <= fetched_instruction;
+            opcode = fetched_instruction[7:6];
+            addr = fetched_instruction[5:0];
 
-            if (fetched_instruction == INSTR_HALT) begin
+            if (opcode == OPC_HALT) begin
                 done <= 1'b1;
                 pc <= pc;
             end else begin
-                opcode = fetched_instruction[7:6];
-                addr = fetched_instruction[5:0];
-
                 case (opcode)
                     OPC_LOAD: begin
                         acc <= memory[addr];

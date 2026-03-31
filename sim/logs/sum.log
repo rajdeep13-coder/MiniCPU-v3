@@ -1,6 +1,6 @@
-VCD info: dumpfile mini_cpu.vcd opened for output.
+VCD info: dumpfile sim/mini_cpu.vcd opened for output.
 
-Starting TEST=sum, program=sum_1_to_5.mem, expected M[30]=15
+Starting TEST=sum, program=mem/sum_1_to_5.mem, expected M[30]=15
 ==============================================================================================
  Cycle |  PC  | Instruction           |   ACC(dec/hex)   | Memory Activity
 ----------------------------------------------------------------------------------------------
@@ -11,8 +11,8 @@ Starting TEST=sum, program=sum_1_to_5.mem, expected M[30]=15
      4 |    5 | ADD   24 (0x98) |     15 / 0x0f    | -
      5 |    6 | STORE 30 (0x5e) |     15 / 0x0f    | STORE -> M[30] = 15 (0x0f)
          *** memory change detected: M[30] now 15 (0x0f)
-     6 |    6 | HALT      (0xff)    |     15 / 0x0f    | done asserted
+     6 |    6 | HALT      (0xc0)    |     15 / 0x0f    | done asserted
 ----------------------------------------------------------------------------------------------
 Done at cycle 7. Final: PC=6 ACC=15 (0x0f) M[30]=15
 ASSERT PASS (sum): M[30]=15
-tb_mini_cpu.v:194: $finish called at 900000 (1ps)
+sim/tb_mini_cpu.v:191: $finish called at 900000 (1ps)

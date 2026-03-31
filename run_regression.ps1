@@ -36,13 +36,13 @@ if (!(Test-Path $VvpExe)) {
 $pythonExe = Resolve-PythonExe
 
 $programs = @(
-    @{ Name = "add";  Asm = "add_two_numbers.asm"; Mem = "add_two_numbers.mem" },
-    @{ Name = "sum";  Asm = "sum_1_to_5.asm";     Mem = "sum_1_to_5.mem" },
-    @{ Name = "calc"; Asm = "calculator.asm";     Mem = "calculator.mem" }
+    @{ Name = "add";  Asm = "asm/add_two_numbers.asm"; Mem = "mem/add_two_numbers.mem" },
+    @{ Name = "sum";  Asm = "asm/sum_1_to_5.asm";     Mem = "mem/sum_1_to_5.mem" },
+    @{ Name = "calc"; Asm = "asm/calculator.asm";     Mem = "mem/calculator.mem" }
 )
 
-New-Item -ItemType Directory -Force "sim_logs" | Out-Null
-New-Item -ItemType Directory -Force "waves" | Out-Null
+New-Item -ItemType Directory -Force "sim/logs" | Out-Null
+New-Item -ItemType Directory -Force "sim/waves" | Out-Null
 
 Write-Host "[1/3] Assembling programs..."
 foreach ($p in $programs) {
@@ -50,23 +50,23 @@ foreach ($p in $programs) {
 }
 
 Write-Host "[2/3] Compiling testbench + CPU..."
-& $IverilogExe -g2012 -o "simv" "tb_mini_cpu.v" "mini_cpu.v"
+& $IverilogExe -g2012 -o "simv" "sim/tb_mini_cpu.v" "src/mini_cpu.v"
 
 Write-Host "[3/3] Running regression tests..."
 foreach ($p in $programs) {
     Write-Host "Running TEST=$($p.Name)"
     $simOutput = & $VvpExe "simv" "+TEST=$($p.Name)"
     $simOutput | ForEach-Object { Write-Host $_ }
-    $simOutput | Set-Content -Encoding ascii "sim_logs/$($p.Name).log"
-    Copy-Item -Force "mini_cpu.vcd" "waves/$($p.Name).vcd"
+    $simOutput | Set-Content -Encoding ascii "sim/logs/$($p.Name).log"
+    Copy-Item -Force "sim/mini_cpu.vcd" "sim/waves/$($p.Name).vcd"
 }
 
-if (Test-Path "mini_cpu.vcd") {
-    Remove-Item -Force "mini_cpu.vcd"
+if (Test-Path "sim/mini_cpu.vcd") {
+    Remove-Item -Force "sim/mini_cpu.vcd"
 }
 
 if (Test-Path "simv") {
     Remove-Item -Force "simv"
 }
 
-Write-Host "Regression complete. Logs in sim_logs/, waveforms in waves/."
+Write-Host "Regression complete. Logs in sim/logs/, waveforms in sim/waves/."

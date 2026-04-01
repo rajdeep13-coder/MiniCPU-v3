@@ -71,6 +71,12 @@ Address range is 0 to 63 because the operand field is 6 bits.
 .\run_regression.ps1
 ```
 
+Keep logs/waves even on success:
+
+```powershell
+.\run_regression.ps1 -KeepArtifactsOnSuccess
+```
+
 2. Expected high-level result:
 
 - add test passes with M[12] = 12
@@ -79,8 +85,17 @@ Address range is 0 to 63 because the operand field is 6 bits.
 
 3. Generated outputs:
 
-- Logs in sim/logs/
-- Waveforms in sim/waves/
+- On failure: logs in sim/logs/ and waveforms in sim/waves/
+- On success: temporary logs/waves are cleaned by default for faster, cleaner runs
+
+## Continuous Integration
+
+GitHub Actions runs regression on every push and pull request:
+
+- Workflow file: `.github/workflows/verilog-regression.yml`
+- Uses Ubuntu runner with Icarus Verilog (`iverilog`, `vvp`)
+- Executes `run_regression.ps1` in fail-fast mode
+- Uploads `sim/logs/` and `sim/waves/` artifacts only when a failure occurs
 
 ## Assembler Usage
 

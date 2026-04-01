@@ -1,0 +1,39 @@
+name: Verilog Regression
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Icarus Verilog
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog
+
+      - name: Run Regression
+        shell: pwsh
+        run: |
+          ./run_regression.ps1 -IverilogExe iverilog -VvpExe vvp -PythonExe python
+
+      - name: Upload failure artifacts (logs/waves)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-failure-artifacts
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            sim/logs/**
+            sim/waves/**

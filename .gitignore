@@ -1,0 +1,4 @@
+sim/logs/*
+sim/waves/*
+!sim/logs/.gitkeep
+!sim/waves/.gitkeep

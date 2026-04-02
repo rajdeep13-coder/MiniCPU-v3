@@ -13,6 +13,7 @@ This final Day-4 version includes a proper HALT opcode in the ISA and a cleaned 
 ```text
 MiniCPU-v3/
   assembler.py
+  ROADMAP.md
   README.md
   run_regression.ps1
   asm/
@@ -114,9 +115,12 @@ python assembler.py asm/program.asm mem/program.mem
 Assembler behavior:
 
 - Accepts LOAD, STORE, ADD, HALT
+- Supports labels in the form `LABEL:` before an instruction
 - Supports comments using # and //
 - Enforces address range 0 to 63
 - Produces one hex byte per line for $readmemh
+
+See [ROADMAP.md](ROADMAP.md) for the next planned phases.
 
 Example output table:
 

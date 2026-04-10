@@ -37,8 +37,22 @@ module mini_cpu (
             addr = fetched_instruction[5:0];
 
             if (opcode == OPC_HALT) begin
-                done <= 1'b1;
-                pc <= pc;
+                if (addr == 6'b000000) begin
+                    done <= 1'b1;
+                    pc <= pc;
+                end else if (addr[5] == 1'b1) begin
+                    // 11_1aaaaa : JMP aaaaa
+                    pc <= {3'b000, addr[4:0]};
+                    done <= 1'b0;
+                end else begin
+                    // 11_0aaaaa : BRZ aaaaa (except 0 which is HALT)
+                    if (acc == 8'd0) begin
+                        pc <= {3'b000, addr[4:0]};
+                    end else begin
+                        pc <= pc + 8'd1;
+                    end
+                    done <= 1'b0;
+                end
             end else begin
                 case (opcode)
                     OPC_LOAD: begin

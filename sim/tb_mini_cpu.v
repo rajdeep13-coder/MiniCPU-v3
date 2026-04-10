@@ -29,7 +29,13 @@ module tb_mini_cpu;
         input [7:0] instr;
         begin
             if (instr[7:6] == 2'b11) begin
-                instr_mnemonic = "HALT";
+                if (instr[5:0] == 6'b000000) begin
+                    instr_mnemonic = "HALT";
+                end else if (instr[5] == 1'b1) begin
+                    instr_mnemonic = "JMP";
+                end else begin
+                    instr_mnemonic = "BRZ";
+                end
             end else begin
                 case (instr[7:6])
                     2'b00: instr_mnemonic = "LOAD";
@@ -69,7 +75,7 @@ module tb_mini_cpu;
                     dut.memory[instr[5:0]],
                     dut.memory[instr[5:0]]
                 );
-            end else if (instr[7:6] == 2'b11) begin
+            end else if ((instr[7:6] == 2'b11) && (instr[5:0] == 6'b000000)) begin
                 $display(
                     " %5d | %4d | HALT      (0x%02h)    | %6d / 0x%02h    | done asserted",
                     cyc,
@@ -116,6 +122,11 @@ module tb_mini_cpu;
             expected_result = 15;
             result_addr = 30;
             program_len = 7;
+        end else if (test_mode == "branch") begin
+            mem_file = "mem/control_flow.mem";
+            expected_result = 7;
+            result_addr = 28;
+            program_len = 9;
         end else if (test_mode == "calc") begin
             mem_file = "mem/calculator.mem";
             expected_result = 25;
@@ -142,6 +153,11 @@ module tb_mini_cpu;
             dut.memory[8'd23] = 8'd4;
             dut.memory[8'd24] = 8'd5;
             dut.memory[8'd30] = 8'd0;
+        end else if (test_mode == "branch") begin
+            dut.memory[8'd25] = 8'd0;
+            dut.memory[8'd26] = 8'd99;
+            dut.memory[8'd27] = 8'd7;
+            dut.memory[8'd28] = 8'd0;
         end else if (test_mode == "calc") begin
             dut.memory[8'd40] = 8'd9;
             dut.memory[8'd41] = 8'd16;

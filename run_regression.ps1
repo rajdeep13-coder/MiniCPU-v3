@@ -65,7 +65,8 @@ $pythonCmd = Resolve-PythonExe -RequestedPython $PythonExe
 $programs = @(
     @{ Name = "add";  Asm = "asm/add_two_numbers.asm"; Mem = "mem/add_two_numbers.mem" },
     @{ Name = "sum";  Asm = "asm/sum_1_to_5.asm";     Mem = "mem/sum_1_to_5.mem" },
-    @{ Name = "calc"; Asm = "asm/calculator.asm";     Mem = "mem/calculator.mem" }
+    @{ Name = "calc"; Asm = "asm/calculator.asm";     Mem = "mem/calculator.mem" },
+    @{ Name = "branch"; Asm = "asm/control_flow.asm"; Mem = "mem/control_flow.mem" }
 )
 
 New-Item -ItemType Directory -Force "sim/logs" | Out-Null

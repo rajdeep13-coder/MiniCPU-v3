@@ -16,11 +16,15 @@ Status: implemented.
 - Allow programs to keep small data values beside code where it helps readability.
 - Keep the output format compatible with `$readmemh`.
 
+Status: implemented.
+
 ## Phase 3: Control Flow ISA
 
 - Add branch and jump opcodes to the CPU and assembler.
 - Support simple loops and conditional execution.
 - Update the testbench with programs that use real control flow.
+
+Status: implemented.
 
 ## Phase 4: Regression Coverage
 

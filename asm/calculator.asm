@@ -4,7 +4,11 @@
 // ADD  B from memory[41]
 // STORE result to memory[42]
 
-LOAD 40
-ADD 41
-STORE 42
+.const A 40
+.const B 41
+.const RESULT 42
+
+LOAD A
+ADD B
+STORE RESULT
 HALT

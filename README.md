@@ -52,9 +52,12 @@ Supported instructions:
 - LOAD addr: opcode 00, binary format 00aaaaaa
 - STORE addr: opcode 01, binary format 01aaaaaa
 - ADD addr: opcode 10, binary format 10aaaaaa
-- HALT: opcode 11, binary format 11000000 in assembler output
+- HALT: control opcode 11 with operand 000000, binary format 11000000
+- BRZ addr: control opcode 11 with operand 0aaaaa, branches when ACC is zero
+- JMP addr: control opcode 11 with operand 1aaaaa, unconditional jump
 
-Address range is 0 to 63 because the operand field is 6 bits.
+Address range for LOAD/STORE/ADD is 0 to 63.
+Address range for BRZ/JMP is 0 to 31 (5-bit branch target field).
 
 ## Prerequisites
 
@@ -83,6 +86,7 @@ Keep logs/waves even on success:
 - add test passes with M[12] = 12
 - sum test passes with M[30] = 15
 - calc test passes with M[42] = 25
+- branch test passes with M[28] = 7
 
 3. Generated outputs:
 
@@ -114,8 +118,10 @@ python assembler.py asm/program.asm mem/program.mem
 
 Assembler behavior:
 
-- Accepts LOAD, STORE, ADD, HALT
+- Accepts LOAD, STORE, ADD, HALT, BRZ, JMP
 - Supports labels in the form `LABEL:` before an instruction
+- Supports `.const NAME VALUE` for named constants
+- Supports `.byte VALUE` to emit raw data bytes inline
 - Supports comments using # and //
 - Enforces address range 0 to 63
 - Produces one hex byte per line for $readmemh

@@ -13,6 +13,8 @@ OPCODES = {
     "STORE": 0b01,
     "ADD": 0b10,
     "HALT": 0b11,
+    "BRZ": 0b11,
+    "JMP": 0b11,
 }
 
 
@@ -34,52 +36,18 @@ def strip_inline_comment(line: str) -> str:
     return line[: min(cut_points)]
 
 
-def parse_instruction(line: str, line_number: int) -> tuple[str, int] | None:
-    """Parse one line of assembly into (mnemonic, addr) or return None for blank/comment lines."""
-    stripped = line.strip()
+def parse_int_token(token: str) -> int | None:
+    """Parse decimal or 0x-prefixed integer tokens, returning None for non-numeric tokens."""
+    if token.startswith(("0x", "0X")):
+        try:
+            return int(token, 16)
+        except ValueError:
+            return None
 
-    if not stripped:
-        return None
-    if stripped.startswith("#") or stripped.startswith("//"):
-        return None
+    if token.isdigit():
+        return int(token, 10)
 
-    no_comment = strip_inline_comment(stripped).strip()
-    if not no_comment:
-        return None
-
-    parts = no_comment.split()
-    mnemonic = parts[0].upper() if parts else ""
-    if mnemonic not in OPCODES:
-        valid = ", ".join(OPCODES.keys())
-        raise AssemblerError(
-            f"Line {line_number}: invalid instruction '{parts[0] if parts else ''}'. Valid instructions: {valid}"
-        )
-
-    if mnemonic == "HALT":
-        if len(parts) != 1:
-            raise AssemblerError(
-                f"Line {line_number}: HALT takes no operand, got: {line.rstrip()}"
-            )
-        return mnemonic, 0
-
-    if len(parts) != 2:
-        raise AssemblerError(
-            f"Line {line_number}: expected '<INSTR> <addr>' or 'HALT', got: {line.rstrip()}"
-        )
-
-    addr_text = parts[1]
-    if not addr_text.isdigit():
-        raise AssemblerError(
-            f"Line {line_number}: address must be decimal 0-63, got '{addr_text}'"
-        )
-
-    addr = int(addr_text, 10)
-    if not (0 <= addr <= 63):
-        raise AssemblerError(
-            f"Line {line_number}: address out of range (0-63), got {addr}"
-        )
-
-    return mnemonic, addr
+    return None
 
 
 def is_valid_label(name: str) -> bool:
@@ -87,22 +55,39 @@ def is_valid_label(name: str) -> bool:
     return bool(LABEL_RE.fullmatch(name))
 
 
-def resolve_operand(operand_text: str, labels: dict[str, int], line_number: int) -> int:
-    """Resolve a numeric operand or label name to a 6-bit address."""
-    if operand_text.isdigit():
-        addr = int(operand_text, 10)
-    elif operand_text in labels:
-        addr = labels[operand_text]
-    else:
-        raise AssemblerError(
-            f"Line {line_number}: unknown address or label '{operand_text}'"
-        )
+def resolve_symbol_or_number(
+    token: str,
+    labels: dict[str, int],
+    constants: dict[str, int],
+    line_number: int,
+) -> int:
+    """Resolve token from numeric literal, constant, or label."""
+    numeric = parse_int_token(token)
+    if numeric is not None:
+        return numeric
 
-    if not (0 <= addr <= 63):
-        raise AssemblerError(
-            f"Line {line_number}: address out of range (0-63), got {addr}"
-        )
+    if token in constants:
+        return constants[token]
 
+    if token in labels:
+        return labels[token]
+
+    raise AssemblerError(f"Line {line_number}: unknown symbol '{token}'")
+
+
+def resolve_address_operand(
+    token: str,
+    labels: dict[str, int],
+    constants: dict[str, int],
+    line_number: int,
+    upper_bound: int,
+) -> int:
+    """Resolve address-like operands and enforce range boundaries."""
+    addr = resolve_symbol_or_number(token, labels, constants, line_number)
+    if not (0 <= addr <= upper_bound):
+        raise AssemblerError(
+            f"Line {line_number}: address out of range (0-{upper_bound}), got {addr}"
+        )
     return addr
 
 
@@ -110,6 +95,7 @@ def assemble_lines(lines: list[str]) -> list[tuple[int, str, int]]:
     """Assemble source lines into tuples of (pc, asm_text, machine_byte)."""
     unresolved_program: list[tuple[int, str, str | None, int]] = []
     labels: dict[str, int] = {}
+    constants: dict[str, int] = {}
     pc = 0
 
     for line_number, line in enumerate(lines, start=1):
@@ -141,6 +127,54 @@ def assemble_lines(lines: list[str]) -> list[tuple[int, str, int]]:
             continue
 
         parts = remaining.split()
+        directive = parts[0].lower() if parts else ""
+
+        if directive == ".const":
+            if len(parts) != 3:
+                raise AssemblerError(
+                    f"Line {line_number}: expected '.const <NAME> <VALUE>'"
+                )
+
+            const_name = parts[1]
+            const_value_text = parts[2]
+
+            if not is_valid_label(const_name):
+                raise AssemblerError(
+                    f"Line {line_number}: invalid constant name '{const_name}'"
+                )
+
+            if const_name in constants or const_name in labels:
+                raise AssemblerError(
+                    f"Line {line_number}: duplicate symbol '{const_name}'"
+                )
+
+            const_value = parse_int_token(const_value_text)
+            if const_value is None:
+                raise AssemblerError(
+                    f"Line {line_number}: constant value must be decimal or hex, got '{const_value_text}'"
+                )
+
+            if not (0 <= const_value <= 255):
+                raise AssemblerError(
+                    f"Line {line_number}: constant value out of range (0-255), got {const_value}"
+                )
+
+            constants[const_name] = const_value
+            continue
+
+        if directive == ".byte":
+            if len(parts) != 2:
+                raise AssemblerError(
+                    f"Line {line_number}: expected '.byte <VALUE>'"
+                )
+
+            if pc > 255:
+                raise AssemblerError("Program too long: PC exceeded 255")
+
+            unresolved_program.append((pc, ".BYTE", parts[1], line_number))
+            pc += 1
+            continue
+
         mnemonic = parts[0].upper() if parts else ""
         if mnemonic not in OPCODES:
             valid = ", ".join(OPCODES.keys())
@@ -170,15 +204,43 @@ def assemble_lines(lines: list[str]) -> list[tuple[int, str, int]]:
     program: list[tuple[int, str, int]] = []
 
     for pc, mnemonic, operand_text, line_number in unresolved_program:
-        if mnemonic == "HALT":
+        if mnemonic == ".BYTE":
+            assert operand_text is not None
+            value = resolve_symbol_or_number(operand_text, labels, constants, line_number)
+            if not (0 <= value <= 255):
+                raise AssemblerError(
+                    f"Line {line_number}: .byte value out of range (0-255), got {value}"
+                )
+            asm_text = f".byte {operand_text}"
+            machine_byte = value
+        elif mnemonic == "HALT":
             addr = 0
             asm_text = "HALT"
+            machine_byte = 0xC0
         else:
             assert operand_text is not None
-            addr = resolve_operand(operand_text, labels, line_number)
+            if mnemonic in ("LOAD", "STORE", "ADD"):
+                addr = resolve_address_operand(
+                    operand_text, labels, constants, line_number, upper_bound=63
+                )
+                machine_byte = (OPCODES[mnemonic] << 6) | addr
+            elif mnemonic == "JMP":
+                addr = resolve_address_operand(
+                    operand_text, labels, constants, line_number, upper_bound=31
+                )
+                machine_byte = 0b11100000 | addr
+            elif mnemonic == "BRZ":
+                addr = resolve_address_operand(
+                    operand_text, labels, constants, line_number, upper_bound=31
+                )
+                machine_byte = 0b11000000 | addr
+            else:
+                raise AssemblerError(
+                    f"Line {line_number}: unsupported instruction '{mnemonic}'"
+                )
+
             asm_text = f"{mnemonic} {operand_text}"
 
-        machine_byte = (OPCODES[mnemonic] << 6) | addr
         program.append((pc, asm_text, machine_byte))
 
     return program

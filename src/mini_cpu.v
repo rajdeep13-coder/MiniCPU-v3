@@ -31,7 +31,7 @@ module mini_cpu (
             instruction <= instruction;
             done <= done;
         end else begin
-            fetched_instruction = memory[pc];
+            fetched_instruction <= memory[pc];
             instruction <= fetched_instruction;
             opcode = fetched_instruction[7:6];
             addr = fetched_instruction[5:0];

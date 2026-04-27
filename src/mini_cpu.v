@@ -10,6 +10,10 @@ module mini_cpu (
     reg [7:0] memory [0:255];
 
     reg [7:0] fetched_instruction;
+    reg [7:0] operand_data;
+    reg write_en;
+    reg [7:0] write_addr;
+    reg [7:0] write_data;
     reg [1:0] opcode;
     reg [5:0] addr;
 
@@ -31,10 +35,29 @@ module mini_cpu (
             instruction <= instruction;
             done <= done;
         end else begin
-            fetched_instruction <= memory[pc];
+            // Fetch/decode from current memory state.
+            fetched_instruction = memory[pc];
             instruction <= fetched_instruction;
+
             opcode = fetched_instruction[7:6];
             addr = fetched_instruction[5:0];
+
+            // Compute write intent first, then read with explicit bypass so
+            // same-cycle read/write to one address is deterministic.
+            write_en = 1'b0;
+            write_addr = 8'd0;
+            write_data = 8'd0;
+
+            if (opcode == OPC_STORE) begin
+                write_en = 1'b1;
+                write_addr = {2'b00, addr};
+                write_data = acc;
+            end
+
+            operand_data = memory[addr];
+            if (write_en && (write_addr == {2'b00, addr})) begin
+                operand_data = write_data;
+            end
 
             if (opcode == OPC_HALT) begin
                 if (addr == 6'b000000) begin
@@ -56,17 +79,21 @@ module mini_cpu (
             end else begin
                 case (opcode)
                     OPC_LOAD: begin
-                        acc <= memory[addr];
+                        acc <= operand_data;
                     end
                     OPC_STORE: begin
-                        memory[addr] <= acc;
+                        // Write is committed after decode/execute staging.
                     end
                     OPC_ADD: begin
-                        acc <= acc + memory[addr];
+                        acc <= acc + operand_data;
                     end
                     default: begin
                     end
                 endcase
+
+                if (write_en) begin
+                    memory[write_addr] <= write_data;
+                end
 
                 pc <= pc + 8'd1;
                 done <= 1'b0;

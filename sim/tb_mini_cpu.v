@@ -132,6 +132,11 @@ module tb_mini_cpu;
             expected_result = 25;
             result_addr = 42;
             program_len = 4;
+        end else if (test_mode == "storeload") begin
+            mem_file = "mem/store_load.mem";
+            expected_result = 42;
+            result_addr = 30;
+            program_len = 4;
         end else begin
             test_mode = "add";
             mem_file = "mem/add_two_numbers.mem";
@@ -162,6 +167,10 @@ module tb_mini_cpu;
             dut.memory[8'd40] = 8'd9;
             dut.memory[8'd41] = 8'd16;
             dut.memory[8'd42] = 8'd0;
+        end else if (test_mode == "storeload") begin
+            // initialize data: source at addr 20 = 42, target addr 30 = 0
+            dut.memory[8'd20] = 8'd42;
+            dut.memory[8'd30] = 8'd0;
         end else begin
             dut.memory[8'd10] = 8'd7;
             dut.memory[8'd11] = 8'd5;

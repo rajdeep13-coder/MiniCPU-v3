@@ -95,13 +95,13 @@ module mini_cpu (
                     done <= 1'b1;
                     pc <= pc;
                 end else if (next_addr[5] == 1'b1) begin
-                    // 11_1aaaaa : JMP aaaaa
-                    pc <= {3'b000, next_addr[4:0]};
+                    // 11_1aaaaa : JMP aaaaa (page-relative: keep pc[7:5])
+                    pc <= {pc[7:5], next_addr[4:0]};
                     done <= 1'b0;
                 end else begin
                     // 11_0aaaaa : BRZ aaaaa (except 0 which is HALT)
                     if (acc == 8'd0) begin
-                        pc <= {3'b000, next_addr[4:0]};
+                        pc <= {pc[7:5], next_addr[4:0]};
                     end else begin
                         pc <= pc + 8'd1;
                     end
